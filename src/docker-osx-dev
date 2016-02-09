@@ -698,6 +698,23 @@ function brew_install {
 }
 
 #
+# Updates brew cask to the version bundled with HomeBrew.
+#
+function update_brew_cask {
+  check_homebrew "cask"
+  if ! brew info cask | grep 'Not installed' >/dev/null 2>&1; then
+    brew uninstall --force brew-cask
+    brew update
+    brew cleanup
+    brew cask cleanup
+  fi
+  if ! brew cask help >/dev/null 2>&1; then
+    log_error "Unable to install required package brew cask. Aborting."
+    exit 1
+  fi
+}
+
+#
 # Checks if HomeBrew is installed.
 # Called only in case of a missing dependency.
 #
@@ -713,12 +730,9 @@ function check_homebrew {
 # Installs all the dependencies for docker-osx-dev.
 #
 function install_dependencies {
+  update_brew_cask
   brew_update
 
-  brew_install "caskroom/cask/brew-cask" "Cask" "brew cask" false
-  brew_install "boot2docker" "Boot2Docker" "boot2docker" false
-  brew_install "docker-compose" "Docker Compose" "docker-compose" false
-  brew_install "docker-machine" "Docker Machine" "docker-machine" false
   brew_install "fswatch" "fswatch" "fswatch" false
   brew_install "coreutils" "GNU core utilities" "greadlink" false
 }
@@ -1007,7 +1021,7 @@ function load_exclude_paths {
     local line=""
     while read line; do
       if [[ "${line:0:1}" != "#" ]] && [[ "${line:0:1}" != "!" ]]; then
-        paths+=("$line")
+        paths+=("'$line'")
       fi
     done < "$ignore_file"
   fi
@@ -1030,7 +1044,7 @@ function load_include_paths {
     local line=""
     while read line; do
       if [[ "${line:0:1}" == "!" ]]; then
-        paths+=("${line:1}")
+        paths+=("'${line:1}'")
       fi
     done < "$ignore_file"
   fi
